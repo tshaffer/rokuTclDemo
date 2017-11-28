@@ -40,6 +40,8 @@ sub outputVideoEvent(msg)
     ' An unexpected problem (but not server timeout or HTTP error) has been detected
   else if msg.isStreamStarted() then
     print "isStreamStarted"
+    print "index = ";msg.GetIndex()
+    print "info = ";msg.GetInfo()
   else if msg.isPlaybackPosition() then
     print "isPlaybackPosition"
   else if msg.isRequestFailed() then
@@ -52,6 +54,8 @@ sub outputVideoEvent(msg)
     print "isResumed"
   else if msg.isFormatDetected() then
     print "isFormatDetected"
+    print "message = ";msg.GetMessage()
+    print "info = ";msg.GetInfo()
   else if msg.isSegmentDownloadStarted() then
     print "isSegmentDownloadStarted"
   else if msg.isDownloadSegmentInfo() then
@@ -65,7 +69,7 @@ sub outputVideoEvent(msg)
   else if msg.isRequestSucceeded() then
     print "isRequestSucceeded"
   else if msg.isListItemSelected() then
-    print "isListItemSelected"
+    print "isListItemSelected: index = ";msg.GetIndex()
   else
     print "unknown video player event: "; msg.GetMessage()
   endif
