@@ -31,43 +31,55 @@ sub Main(input as Dynamic)
   showHeroScreen()
 end sub
 
-' Initializes the scene and shows the main homepage.
-' Handles closing of the channel.
+
+sub outputVideoEvent(msg)
+  if msg.isStatusMessage() then
+    print "status message: "; msg.GetMessage()
+  else if msg.isRequestFailed() then
+    print "request failed: "; msg.GetMessage()
+    ' An unexpected problem (but not server timeout or HTTP error) has been detected
+  else if msg.isStreamStarted() then
+    print "isStreamStarted"
+  else if msg.isPlaybackPosition() then
+    print "isPlaybackPosition"
+  else if msg.isRequestFailed() then
+    print "isRequestFailed"
+  else if msg.isFullResult() then
+    print "isFullResult"
+  else if msg.isPaused() then
+    print "isPaused"
+  else if msg.isResumed() then
+    print "isResumed"
+  else if msg.isFormatDetected() then
+    print "isFormatDetected"
+  else if msg.isSegmentDownloadStarted() then
+    print "isSegmentDownloadStarted"
+  else if msg.isDownloadSegmentInfo() then
+    print "isDownloadSegmentInfo"
+  else if msg.isStreamSegmentInfo() then
+    print "isStreamSegmentInfo"
+  else if msg.isTimedMetaData() then
+    print "isTimedMetaData"
+  else if msg.isCaptionModeChanged() then
+    print "isCaptionModeChanged"
+  else if msg.isRequestSucceeded() then
+    print "isRequestSucceeded"
+  else if msg.isListItemSelected() then
+    print "isListItemSelected"
+  else
+    print "unknown video player event: "; msg.GetMessage()
+  endif
+end sub
+
+
 sub showHeroScreen()
-
-
-
   print "main.brs - [showHeroScreen]"
-''  screen = CreateObject("roSGScreen")
   m.port = CreateObject("roMessagePort")
 
   print "create video player"
-  v = CreateObject("roVideoPlayer")
-  v.SetDestinationRect(0, 0, 1920, 1080)
-  print v
-  v.setMessagePort(m.port)
-
-''  stream = {}
-''  stream.url = "http://10.1.0.95:3000/Roku_4K_Streams/TCL_2017_C-Series_BBY_4K-res.mp4"
-''  stream.url = "http://10.1.0.95:3000/fox5/play.m3u8"
-''  stream.quality = true
-''  stream.contentid = "bsStream"
-
-''  content = {}
-''  content.streamFormat = "mp4"
-''  content.url = "http://10.1.0.95:3000/Roku_4K_Streams/TCL_2017_C-Series_BBY_4K-res.mp4"
-''  content.streamFormat = "mp4"
-''  content.url = "http://video.ted.com/talks/podcast/DanGilbert_2004_480.mp4"
-
-''  content.Stream = stream
-
- '' v.AddContent(content)
-
-''  content = {
-''    Stream: { url : "http://10.1.0.95:3000/fox5/play.m3u8" }
-''    StreamFormat: "hls"
-''    Stream: { url : "http://video.ted.com/talks/podcast/DanGilbert_2004_480.mp4" }
-''  }
+  player = CreateObject("roVideoPlayer")
+  player.SetDestinationRect(0, 0, 1920, 1080)
+  player.setMessagePort(m.port)
 
   Stream = {}
 ''  Stream.url = "http://10.1.0.95:3000/fox5/play.m3u8"
@@ -81,11 +93,9 @@ sub showHeroScreen()
   contentList = []
   contentList.push(content)
 
-  v.setContentList( contentList )
+  player.setContentList( contentList )
 
-  print v
-
-  ok = v.Play()
+  ok = player.Play()
   print ok
 
   udp = createobject("roDatagramSocket")
@@ -97,19 +107,11 @@ sub showHeroScreen()
   udp.setSendToAddress(addr) ' peer IP and port
   udp.notifyReadable(true)
 
-''  screen.setMessagePort(m.port)
-''  scene = screen.CreateScene("SimpleVideoScene")
-''  screen.show()
-
   while(true)
     msg = wait(0, m.port)
     msgType = type(msg)
     print msgType
-    if msgType = "roSGScreenEvent"
-''      if msg.isScreenClosed() then return
-      if msg.isScreenClosed() then return
-      stop
-    else if msgType="roSocketEvent" then
+    if msgType="roSocketEvent" then
       if msg.getSocketID()=udp.getID() then
         if udp.isReadable() then
           message = udp.receiveStr(512) ' max 512 characters
@@ -117,21 +119,8 @@ sub showHeroScreen()
         endif
       endif
     else if msgType = "roVideoPlayerEvent" then
-      print "roVideoPlayerEvent received"
-''      print "isStreamStarted: "; msg.isStreamStarted()
-''      print "isStatusMessage: "; msg.isStatusMessage()
-''      print "isFormatDetected: "; msg.isFormatDetected()
-''      print "isRequestFailed: "; msg.isRequestFailed()
-''      print "isRequestSucceeded: "; msg.isRequestSucceeded()
-
-      if msg.isStatusMessage() then
-        print "status message: "; msg.GetMessage()
-      else if msg.isRequestFailed() then
-        print "request failed: "; msg.GetMessage()
-        ' An unexpected problem (but not server timeout or HTTP error) has been detected
-      else
-        print "unknown video player event: "; msg.GetMessage()
-      endif
+      outputVideoEvent(msg)
     end if
   end while
 end sub
+
