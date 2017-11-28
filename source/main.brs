@@ -138,13 +138,14 @@ Sub showContentScreen()
   udp = CreateUdp(m.port)
 
   Stream = {}
-  Stream.url = "http://10.1.0.95:3000/fox5/play.m3u8"
+''  Stream.url = "http://10.1.0.95:3000/fox5/play.m3u8"
 
 ' appears to stream properly
 ''  Stream.url = "http://video.ted.com/talks/podcast/DanGilbert_2004_480.mp4"
 
 ' request failed: An unexpected problem (but not server timeout or HTTP error) has been detected.
-  Stream.url = "http://10.1.0.95:3000/Roku_4K_Streams/TCL_2017_C-Series_BBY_4K-res.mp4"
+''  Stream.url = "http://10.1.0.95:3000/Roku_4K_Streams/TCL_2017_C-Series_BBY_4K-res.mp4"
+  Stream.url = "http://192.168.0.105:3000/Roku_4K_Streams/TCL_2017_C-Series_BBY_4K-res.mp4"
 
   content = {}
   content.Stream= Stream
@@ -164,6 +165,16 @@ Sub showContentScreen()
           message = udp.receiveStr(512) ' max 512 characters
           print "received socket message: '"; message; "'"
           ' udp.sendStr("milkshake")  ' causes infinite loop as it comes back as a message'
+
+          if Instr(1, message, "video:") = 1 then
+            Stream.url = "http://video.ted.com/talks/podcast/DanGilbert_2004_480.mp4"
+            content.Stream= Stream
+''            sleep(100) - appears to be unnecessary
+            screen = PlayFromVideoScreen(m.port, content)
+          endif
+
+
+
         endif
       endif
     else if msgType = "roVideoPlayerEvent" then
