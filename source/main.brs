@@ -166,10 +166,23 @@ Sub showContentScreen()
           print "received socket message: '"; message; "'"
           ' udp.sendStr("milkshake")  ' causes infinite loop as it comes back as a message'
 
+'video:http://192.168.0.105:3000/v3sample/play.m3u8:streamFormat:hls'
+          print message
           if Instr(1, message, "video:") = 1 then
-            Stream.url = "http://video.ted.com/talks/podcast/DanGilbert_2004_480.mp4"
+            urlEndIndex = Instr(2, message, ":streamFormat:")
+            print urlEndIndex
+
+            url = mid(message, 7, urlEndIndex - 7)
+            print url
+
+            streamFormat = mid(message, urlEndIndex + 14)
+            print streamFormat
+
+''            Stream.url = "http://video.ted.com/talks/podcast/DanGilbert_2004_480.mp4"
+            Stream.url = url
             content.Stream= Stream
-''            sleep(100) - appears to be unnecessary
+            content.StreamFormat = streamFormat
+
             screen = PlayFromVideoScreen(m.port, content)
           endif
 
