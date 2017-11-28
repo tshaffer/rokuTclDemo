@@ -32,9 +32,12 @@ sub Main(input as Dynamic)
 end sub
 
 
-sub outputVideoEvent(msg)
+sub outputVideoEvent(msg, player)
   if msg.isStatusMessage() then
     print "status message: "; msg.GetMessage()
+    if msg.GetMessage() = "start of play" then
+      print "playbackDuration = ";player.GetPlaybackDuration()
+    endif
   else if msg.isRequestFailed() then
     print "request failed: "; msg.GetMessage()
     ' An unexpected problem (but not server timeout or HTTP error) has been detected
@@ -44,6 +47,8 @@ sub outputVideoEvent(msg)
     print "info = ";msg.GetInfo()
   else if msg.isPlaybackPosition() then
     print "isPlaybackPosition"
+    print "index = ";msg.GetIndex()
+    print "info = ";msg.GetInfo()
   else if msg.isRequestFailed() then
     print "isRequestFailed"
   else if msg.isFullResult() then
@@ -98,6 +103,7 @@ sub showHeroScreen()
   contentList.push(content)
 
   player.setContentList( contentList )
+  player.SetPositionNotificationPeriod(2)
 
   ok = player.Play()
   print ok
@@ -123,7 +129,7 @@ sub showHeroScreen()
         endif
       endif
     else if msgType = "roVideoPlayerEvent" then
-      outputVideoEvent(msg)
+      outputVideoEvent(msg, player)
     end if
   end while
 end sub
