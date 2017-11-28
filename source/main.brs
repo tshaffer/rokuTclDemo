@@ -28,7 +28,7 @@ sub Main(input as Dynamic)
       'launch/prep the content mapped to the contentID here
     end if
   end if
-  showHeroScreen()
+  showContentScreen()
 end sub
 
 
@@ -81,18 +81,51 @@ sub outputVideoEvent(msg, player)
 end sub
 
 
-sub showHeroScreen()
-  print "main.brs - [showHeroScreen]"
-  m.port = CreateObject("roMessagePort")
+sub videoPlayerPlayback(port As Object, contentList As Object)
 
   print "create video player"
   player = CreateObject("roVideoPlayer")
   player.SetDestinationRect(0, 0, 1920, 1080)
-  player.setMessagePort(m.port)
+  player.setMessagePort(port)
+
+  player.setContentList( contentList )
+  player.SetPositionNotificationPeriod(2)
+
+  ok = player.Play()
+  print ok
+
+end sub
+
+
+Sub CreateUdp(port)
+
+  udp = createobject("roDatagramSocket")
+  udp.setMessagePort(port) 'notifications for udp come to msgPort
+  addr = createobject("roSocketAddress")
+  addr.setPort(5000)
+  udp.setAddress(addr) ' bind to all host addresses on port 5000
+  addr.SetHostName("10.8.1.89")
+  udp.setSendToAddress(addr) ' peer IP and port
+  udp.notifyReadable(true)
+
+End Sub
+
+
+sub showContentScreen()
+
+  print "main.brs - [showContentScreen]"
+  m.port = CreateObject("roMessagePort")
+
+  CreateUdp(m.port)
 
   Stream = {}
 ''  Stream.url = "http://10.1.0.95:3000/fox5/play.m3u8"
-  Stream.url = "http://video.ted.com/talks/podcast/DanGilbert_2004_480.mp4"
+
+' appears to stream properly
+''  Stream.url = "http://video.ted.com/talks/podcast/DanGilbert_2004_480.mp4"
+
+' request failed: An unexpected problem (but not server timeout or HTTP error) has been detected.
+  Stream.url = "http://10.1.0.95:3000/TCL_2017_C-Series_BBY_4K-res.mp4"
 
   content = {}
   content.Stream= Stream
@@ -102,20 +135,11 @@ sub showHeroScreen()
   contentList = []
   contentList.push(content)
 
-  player.setContentList( contentList )
-  player.SetPositionNotificationPeriod(2)
 
-  ok = player.Play()
-  print ok
-
-  udp = createobject("roDatagramSocket")
-  udp.setMessagePort(m.port) 'notifications for udp come to msgPort
-  addr = createobject("roSocketAddress")
-  addr.setPort(5000)
-  udp.setAddress(addr) ' bind to all host addresses on port 5000
-  addr.SetHostName("10.8.1.89")
-  udp.setSendToAddress(addr) ' peer IP and port
-  udp.notifyReadable(true)
+  screen = CreateObject("roVideoScreen")
+  screen.setMessagePort(m.port)
+  screen.SetContent(content)
+  screen.show()
 
   while(true)
     msg = wait(0, m.port)
@@ -128,8 +152,10 @@ sub showHeroScreen()
           print "received socket message: '"; message; "'"
         endif
       endif
-    else if msgType = "roVideoPlayerEvent" then
-      outputVideoEvent(msg, player)
+''    else if msgType = "roVideoPlayerEvent" then
+''      outputVideoEvent(msg, player)
+    else if msgType = "roVideoScreenEvent" then
+      print "showVideoScreen | msg = "; msg.GetMessage() " | index = "; msg.GetIndex()
     end if
   end while
 end sub
