@@ -32,7 +32,7 @@ sub Main(input as Dynamic)
 end sub
 
 
-sub outputVideoEvent(msg, player)
+sub processVideoPlayerEvent(msg, player)
   if msg.isStatusMessage() then
     print "status message: "; msg.GetMessage()
     if msg.GetMessage() = "start of play" then
@@ -81,22 +81,6 @@ sub outputVideoEvent(msg, player)
 end sub
 
 
-sub videoPlayerPlayback(port As Object, contentList As Object)
-
-  print "create video player"
-  player = CreateObject("roVideoPlayer")
-  player.SetDestinationRect(0, 0, 1920, 1080)
-  player.setMessagePort(port)
-
-  player.setContentList( contentList )
-  player.SetPositionNotificationPeriod(2)
-
-  ok = player.Play()
-  print ok
-
-end sub
-
-
 Sub CreateUdp(port)
 
   udp = createobject("roDatagramSocket")
@@ -111,7 +95,40 @@ Sub CreateUdp(port)
 End Sub
 
 
-sub showContentScreen()
+Function PlayFromVideoPlayer(port As Object, content As Object)
+
+  player = CreateObject("roVideoPlayer")
+  player.SetDestinationRect(0, 0, 1920, 1080)
+  player.setMessagePort(port)
+
+  contentList = []
+  contentList.push(content)
+
+  player.setContentList( contentList )
+  player.SetPositionNotificationPeriod(2)
+
+  ok = player.Play()
+  print ok
+
+  return player
+
+End Function
+
+
+Function PlayFromVideoScreen(port As Object, content As Object) As Object
+
+  screen = CreateObject("roVideoScreen")
+  screen.setMessagePort(m.port)
+  screen.setLoop(true)
+  screen.SetContent(content)
+  screen.show()
+
+  return screen
+
+End Function
+
+
+Sub showContentScreen()
 
   print "main.brs - [showContentScreen]"
   m.port = CreateObject("roMessagePort")
@@ -119,27 +136,21 @@ sub showContentScreen()
   CreateUdp(m.port)
 
   Stream = {}
-''  Stream.url = "http://10.1.0.95:3000/fox5/play.m3u8"
+  Stream.url = "http://10.1.0.95:3000/fox5/play.m3u8"
 
 ' appears to stream properly
 ''  Stream.url = "http://video.ted.com/talks/podcast/DanGilbert_2004_480.mp4"
 
 ' request failed: An unexpected problem (but not server timeout or HTTP error) has been detected.
-  Stream.url = "http://10.1.0.95:3000/TCL_2017_C-Series_BBY_4K-res.mp4"
+  Stream.url = "http://10.1.0.95:3000/Roku_4K_Streams/TCL_2017_C-Series_BBY_4K-res.mp4"
 
   content = {}
   content.Stream= Stream
 ''  content.StreamFormat = "hls"
   content.StreamFormat = "mp4"
 
-  contentList = []
-  contentList.push(content)
-
-
-  screen = CreateObject("roVideoScreen")
-  screen.setMessagePort(m.port)
-  screen.SetContent(content)
-  screen.show()
+  screen = PlayFromVideoScreen(m.port, content)
+''  player = PlayFromVideoPlayer(m.port, content)
 
   while(true)
     msg = wait(0, m.port)
@@ -152,11 +163,11 @@ sub showContentScreen()
           print "received socket message: '"; message; "'"
         endif
       endif
-''    else if msgType = "roVideoPlayerEvent" then
-''      outputVideoEvent(msg, player)
+    else if msgType = "roVideoPlayerEvent" then
+      processVideoPlayerEvent(msg, player)
     else if msgType = "roVideoScreenEvent" then
       print "showVideoScreen | msg = "; msg.GetMessage() " | index = "; msg.GetIndex()
     end if
   end while
-end sub
+end Sub
 
