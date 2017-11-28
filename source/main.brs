@@ -81,18 +81,20 @@ sub processVideoPlayerEvent(msg, player)
 end sub
 
 
-Sub CreateUdp(port)
+Function CreateUdp(msgPort) As Object
 
-  udp = createobject("roDatagramSocket")
-  udp.setMessagePort(port) 'notifications for udp come to msgPort
-  addr = createobject("roSocketAddress")
+  udp = CreateObject("roDatagramSocket")
+  udp.setMessagePort(msgPort) 'notifications for udp come to msgPort
+  addr = CreateObject("roSocketAddress")
   addr.setPort(5000)
   udp.setAddress(addr) ' bind to all host addresses on port 5000
   addr.SetHostName("10.8.1.89")
   udp.setSendToAddress(addr) ' peer IP and port
   udp.notifyReadable(true)
 
-End Sub
+  return udp
+
+End Function
 
 
 Function PlayFromVideoPlayer(port As Object, content As Object)
@@ -133,7 +135,7 @@ Sub showContentScreen()
   print "main.brs - [showContentScreen]"
   m.port = CreateObject("roMessagePort")
 
-  CreateUdp(m.port)
+  udp = CreateUdp(m.port)
 
   Stream = {}
   Stream.url = "http://10.1.0.95:3000/fox5/play.m3u8"
@@ -161,6 +163,7 @@ Sub showContentScreen()
         if udp.isReadable() then
           message = udp.receiveStr(512) ' max 512 characters
           print "received socket message: '"; message; "'"
+          ' udp.sendStr("milkshake")  ' causes infinite loop as it comes back as a message'
         endif
       endif
     else if msgType = "roVideoPlayerEvent" then
