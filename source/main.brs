@@ -93,8 +93,8 @@ Function CreateUdp(msgPort) As Object
   addr = CreateObject("roSocketAddress")
   addr.setPort(5000)
   udp.setAddress(addr) ' bind to all host addresses on port 5000
-  addr.SetHostName("10.8.1.92")
-  udp.setSendToAddress(addr) ' peer IP and port
+  addr.SetHostName("10.1.0.95")   ' BrightSign IP address
+  udp.setSendToAddress(addr) ' destination IP and port
   udp.notifyReadable(true)
 
   return udp
@@ -105,8 +105,9 @@ End Function
 Function PlayFromVideoScreen(port As Object, content As Object, loop As Boolean) As Object
 
   screen = CreateObject("roVideoScreen")
-  screen.setMessagePort(m.port)
-  screen.setLoop(loop)
+  screen.setMessagePort(port)
+''  screen.setLoop(loop)
+  screen.setLoop(true)
   screen.SetContent(content)
   screen.show()
 
@@ -118,9 +119,10 @@ End Function
 Sub showContentScreen()
 
   print "main.brs - [showContentScreen]"
-  m.port = CreateObject("roMessagePort")
+  msgPort = CreateObject("roMessagePort")
 
-  udp = CreateUdp(m.port)
+  udp = CreateUdp(msgPort)
+  udp.sendStr("rokuAppStart")
 
   Stream = {}
   attractLoopUrl = "http://10.1.0.95:3000/Roku_4K_Streams/TCL_2017_C-Series_BBY_4K-res.mp4"
@@ -130,11 +132,11 @@ Sub showContentScreen()
   content.Stream= Stream
   content.StreamFormat = "mp4"
 
-  screen = PlayFromVideoScreen(m.port, content, true)
+  screen = PlayFromVideoScreen(msgPort, content, true)
   attractLoopPlaying = true
 
   while(true)
-    msg = wait(0, m.port)
+    msg = wait(0, msgPort)
     msgType = type(msg)
     if msgType <> "roVideoScreenEvent" then
       print msgType
@@ -161,7 +163,7 @@ Sub showContentScreen()
             content.Stream= Stream
             content.StreamFormat = streamFormat
 
-            screen = PlayFromVideoScreen(m.port, content, false)
+            screen = PlayFromVideoScreen(msgPort, content, false)
             attractLoopPlaying = false
 
           endif
@@ -176,7 +178,7 @@ Sub showContentScreen()
         content = {}
         content.Stream= Stream
         content.StreamFormat = "mp4"
-        screen = PlayFromVideoScreen(m.port, content, true)
+        screen = PlayFromVideoScreen(msgPort, content, true)
       endif
     end if
   end while
