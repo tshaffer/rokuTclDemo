@@ -32,7 +32,18 @@ sub Main(input as Dynamic)
 end sub
 
 
-Function ProcessVideoScreenEvent(msg, screen) As String
+Sub ProcessPlaybackPositionEvent(msg, udp)
+
+  print "isPlaybackPosition"
+  print "index = ";msg.GetIndex()
+  print "info = ";msg.GetInfo()
+
+  udp.sendStr("roku")
+
+End Sub
+
+
+Function ProcessVideoScreenEvent(msg, screen, udp) As String
   if msg.isStatusMessage() then
     print "status message: "; msg.GetMessage()
     return "Status:" + msg.GetMessage()
@@ -47,9 +58,7 @@ Function ProcessVideoScreenEvent(msg, screen) As String
     print "index = ";msg.GetIndex()
     print "info = ";msg.GetInfo()
   else if msg.isPlaybackPosition() then
-    print "isPlaybackPosition"
-    print "index = ";msg.GetIndex()
-    print "info = ";msg.GetInfo()
+    ProcessPlaybackPositionEvent(msg, udp)
   else if msg.isRequestFailed() then
     print "isRequestFailed"
   else if msg.isPaused() then
@@ -111,6 +120,8 @@ Function PlayFromVideoScreen(port As Object, content As Object, loop As Boolean)
   screen.SetContent(content)
   screen.show()
 
+  screen.SetPositionNotificationPeriod(4)
+
   return screen
 
 End Function
@@ -122,7 +133,7 @@ Sub showContentScreen()
   msgPort = CreateObject("roMessagePort")
 
   udp = CreateUdp(msgPort)
-  udp.sendStr("rokuAppStart")
+  udp.sendStr("roku")
 
   Stream = {}
   attractLoopUrl = "http://10.1.0.95:3000/Roku_4K_Streams/TCL_2017_C-Series_BBY_4K-res.mp4"
@@ -170,7 +181,7 @@ Sub showContentScreen()
         endif
       endif
     else if msgType = "roVideoScreenEvent" then
-      event$ = ProcessVideoScreenEvent(msg, screen)
+      event$ = ProcessVideoScreenEvent(msg, screen, udp)
       if event$ = "MediaEnd" and not attractLoopPlaying then
         ' restart attract loop
         Stream = {}
