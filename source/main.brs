@@ -32,12 +32,13 @@ sub Main(input as Dynamic)
 end sub
 
 
-sub processVideoPlayerEvent(msg, player)
+Function ProcessVideoScreenEvent(msg, screen) As String
   if msg.isStatusMessage() then
     print "status message: "; msg.GetMessage()
-    if msg.GetMessage() = "start of play" then
-      print "playbackDuration = ";player.GetPlaybackDuration()
-    endif
+    return "Status:" + msg.GetMessage()
+  else if msg.isFullResult() then
+    print "isFullResult"
+    return "MediaEnd"
   else if msg.isRequestFailed() then
     print "request failed: "; msg.GetMessage()
     ' An unexpected problem (but not server timeout or HTTP error) has been detected
@@ -51,8 +52,6 @@ sub processVideoPlayerEvent(msg, player)
     print "info = ";msg.GetInfo()
   else if msg.isRequestFailed() then
     print "isRequestFailed"
-  else if msg.isFullResult() then
-    print "isFullResult"
   else if msg.isPaused() then
     print "isPaused"
   else if msg.isResumed() then
@@ -62,11 +61,14 @@ sub processVideoPlayerEvent(msg, player)
     print "message = ";msg.GetMessage()
     print "info = ";msg.GetInfo()
   else if msg.isSegmentDownloadStarted() then
-    print "isSegmentDownloadStarted"
+    eventRecognized = true
+''    print "isSegmentDownloadStarted"
   else if msg.isDownloadSegmentInfo() then
-    print "isDownloadSegmentInfo"
+    eventRecognized = true
+''    print "isDownloadSegmentInfo"
   else if msg.isStreamSegmentInfo() then
-    print "isStreamSegmentInfo"
+    eventRecognized = true
+''    print "isStreamSegmentInfo"
   else if msg.isTimedMetaData() then
     print "isTimedMetaData"
   else if msg.isCaptionModeChanged() then
@@ -76,9 +78,12 @@ sub processVideoPlayerEvent(msg, player)
   else if msg.isListItemSelected() then
     print "isListItemSelected: index = ";msg.GetIndex()
   else
-    print "unknown video player event: "; msg.GetMessage()
+    print "unknown video screen event: "; msg.GetMessage()
   endif
-end sub
+
+  return ""
+
+End Function
 
 
 Function CreateUdp(msgPort) As Object
@@ -88,7 +93,7 @@ Function CreateUdp(msgPort) As Object
   addr = CreateObject("roSocketAddress")
   addr.setPort(5000)
   udp.setAddress(addr) ' bind to all host addresses on port 5000
-  addr.SetHostName("10.8.1.89")
+  addr.SetHostName("10.8.1.92")
   udp.setSendToAddress(addr) ' peer IP and port
   udp.notifyReadable(true)
 
@@ -97,31 +102,11 @@ Function CreateUdp(msgPort) As Object
 End Function
 
 
-Function PlayFromVideoPlayer(port As Object, content As Object)
-
-  player = CreateObject("roVideoPlayer")
-  player.SetDestinationRect(0, 0, 1920, 1080)
-  player.setMessagePort(port)
-
-  contentList = []
-  contentList.push(content)
-
-  player.setContentList( contentList )
-  player.SetPositionNotificationPeriod(2)
-
-  ok = player.Play()
-  print ok
-
-  return player
-
-End Function
-
-
-Function PlayFromVideoScreen(port As Object, content As Object) As Object
+Function PlayFromVideoScreen(port As Object, content As Object, loop As Boolean) As Object
 
   screen = CreateObject("roVideoScreen")
   screen.setMessagePort(m.port)
-  screen.setLoop(true)
+  screen.setLoop(loop)
   screen.SetContent(content)
   screen.show()
 
@@ -138,27 +123,22 @@ Sub showContentScreen()
   udp = CreateUdp(m.port)
 
   Stream = {}
-''  Stream.url = "http://10.1.0.95:3000/fox5/play.m3u8"
-
-' appears to stream properly
-''  Stream.url = "http://video.ted.com/talks/podcast/DanGilbert_2004_480.mp4"
-
-' request failed: An unexpected problem (but not server timeout or HTTP error) has been detected.
-''  Stream.url = "http://10.1.0.95:3000/Roku_4K_Streams/TCL_2017_C-Series_BBY_4K-res.mp4"
-  Stream.url = "http://192.168.0.105:3000/Roku_4K_Streams/TCL_2017_C-Series_BBY_4K-res.mp4"
+  attractLoopUrl = "http://10.1.0.95:3000/Roku_4K_Streams/TCL_2017_C-Series_BBY_4K-res.mp4"
+  Stream.url = attractLoopUrl
 
   content = {}
   content.Stream= Stream
-''  content.StreamFormat = "hls"
   content.StreamFormat = "mp4"
 
-  screen = PlayFromVideoScreen(m.port, content)
-''  player = PlayFromVideoPlayer(m.port, content)
+  screen = PlayFromVideoScreen(m.port, content, true)
+  attractLoopPlaying = true
 
   while(true)
     msg = wait(0, m.port)
     msgType = type(msg)
-    print msgType
+    if msgType <> "roVideoScreenEvent" then
+      print msgType
+    endif
     if msgType="roSocketEvent" then
       if msg.getSocketID()=udp.getID() then
         if udp.isReadable() then
@@ -166,7 +146,6 @@ Sub showContentScreen()
           print "received socket message: '"; message; "'"
           ' udp.sendStr("milkshake")  ' causes infinite loop as it comes back as a message'
 
-'video:http://192.168.0.105:3000/v3sample/play.m3u8:streamFormat:hls'
           print message
           if Instr(1, message, "video:") = 1 then
             urlEndIndex = Instr(2, message, ":streamFormat:")
@@ -178,22 +157,27 @@ Sub showContentScreen()
             streamFormat = mid(message, urlEndIndex + 14)
             print streamFormat
 
-''            Stream.url = "http://video.ted.com/talks/podcast/DanGilbert_2004_480.mp4"
             Stream.url = url
             content.Stream= Stream
             content.StreamFormat = streamFormat
 
-            screen = PlayFromVideoScreen(m.port, content)
+            screen = PlayFromVideoScreen(m.port, content, false)
+            attractLoopPlaying = false
+
           endif
-
-
-
         endif
       endif
-    else if msgType = "roVideoPlayerEvent" then
-      processVideoPlayerEvent(msg, player)
     else if msgType = "roVideoScreenEvent" then
-      print "showVideoScreen | msg = "; msg.GetMessage() " | index = "; msg.GetIndex()
+      event$ = ProcessVideoScreenEvent(msg, screen)
+      if event$ = "MediaEnd" and not attractLoopPlaying then
+        ' restart attract loop
+        Stream = {}
+        Stream.url = attractLoopUrl
+        content = {}
+        content.Stream= Stream
+        content.StreamFormat = "mp4"
+        screen = PlayFromVideoScreen(m.port, content, true)
+      endif
     end if
   end while
 end Sub
