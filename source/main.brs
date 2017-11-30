@@ -127,6 +127,42 @@ Function PlayFromVideoScreen(port As Object, content As Object) As Object
 End Function
 
 
+Function ProcessUdpMessage(msg, udp, msgPort)
+
+  screen = invalid
+
+  if msg.getSocketID()=udp.getID() then
+    if udp.isReadable() then
+      message = udp.receiveStr(512) ' max 512 characters
+      print "received socket message: '"; message; "'"
+
+      print message
+
+      if Instr(1, message, "videoId:") = 1 then
+
+        videoId = mid(message, 9)
+        print "videoId: ";videoId
+
+      else
+
+        Stream = {}
+        Stream.url = message
+
+        content = {}
+        content.Stream= Stream
+        content.StreamFormat = "mp4"
+
+        screen = PlayFromVideoScreen(msgPort, content)
+
+      endif
+    endif
+  endif
+
+  return screen
+
+End Function
+
+
 Sub showContentScreen()
 
   print "main.brs - [showContentScreen]"
@@ -144,36 +180,17 @@ Sub showContentScreen()
   content.StreamFormat = "mp4"
 
   screen = PlayFromVideoScreen(msgPort, content)
-  attractLoopPlaying = true
   videoId = "attract"
 
   while(true)
+
     msg = wait(0, msgPort)
     msgType = type(msg)
 
     if msgType="roSocketEvent" then
-      if msg.getSocketID()=udp.getID() then
-        if udp.isReadable() then
-          message = udp.receiveStr(512) ' max 512 characters
-          print "received socket message: '"; message; "'"
 
-          print message
+      screen = ProcessUdpMessage(msg, udp, msgPort)
 
-          if Instr(1, message, "videoId:") = 1 then
-            videoId = mid(message, 9)
-            print "videoId: ";videoId
-          else
-            url = message
-            streamFormat = "mp4"
-            Stream.url = url
-            content.Stream= Stream
-            content.StreamFormat = streamFormat
-
-            screen = PlayFromVideoScreen(msgPort, content)
-            attractLoopPlaying = false
-          endif
-        endif
-      endif
     else if msgType = "roVideoScreenEvent" then
 
       PrintVideoScreenEvent(msg)
@@ -186,15 +203,11 @@ Sub showContentScreen()
         content.Stream= Stream
         content.StreamFormat = "mp4"
         screen = PlayFromVideoScreen(msgPort, content)
-        attractLoopPlaying = true
 
       else if IsPlaybackProgressEvent(msg) then
-''        if attractLoopPlaying then
-''          videoId = "attract"
-''        else
-''          videoId = "0"
-''        endif
+
         ProcessPlaybackPositionEvent(udp, videoId)
+
       endif
 
     endif
