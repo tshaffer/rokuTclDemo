@@ -32,14 +32,8 @@ sub Main(input as Dynamic)
 end sub
 
 
-Sub ProcessPlaybackPositionEvent(msg, udp, videoId)
-
-  print "isPlaybackPosition"
-  print "index = ";msg.GetIndex()
-  print "info = ";msg.GetInfo()
-
+Sub ProcessPlaybackPositionEvent(udp, videoId)
   udp.sendStr("roku:" + videoId)
-
 End Sub
 
 
@@ -53,22 +47,21 @@ Function IsPlaybackProgressEvent(msg) As Boolean
 End Function
 
 
-Function ProcessVideoScreenEvent(msg, screen, udp, videoId) As String
+Sub PrintVideoScreenEvent(msg)
   if msg.isStatusMessage() then
     print "status message: "; msg.GetMessage()
-    return "Status:" + msg.GetMessage()
   else if msg.isFullResult() then
     print "isFullResult"
-    return "MediaEnd"
   else if msg.isRequestFailed() then
     print "request failed: "; msg.GetMessage()
-    ' An unexpected problem (but not server timeout or HTTP error) has been detected
   else if msg.isStreamStarted() then
     print "isStreamStarted"
     print "index = ";msg.GetIndex()
     print "info = ";msg.GetInfo()
   else if msg.isPlaybackPosition() then
-    ProcessPlaybackPositionEvent(msg, udp, videoId)
+    print "isPlaybackPosition"
+    print "index = ";msg.GetIndex()
+    print "info = ";msg.GetInfo()
   else if msg.isRequestFailed() then
     print "isRequestFailed"
   else if msg.isPaused() then
@@ -100,9 +93,7 @@ Function ProcessVideoScreenEvent(msg, screen, udp, videoId) As String
     print "unknown video screen event: "; msg.GetMessage()
   endif
 
-  return ""
-
-End Function
+End Sub
 
 
 Function CreateUdp(msgPort) As Object
@@ -121,11 +112,10 @@ Function CreateUdp(msgPort) As Object
 End Function
 
 
-Function PlayFromVideoScreen(port As Object, content As Object, loop As Boolean) As Object
+Function PlayFromVideoScreen(port As Object, content As Object) As Object
 
   screen = CreateObject("roVideoScreen")
   screen.setMessagePort(port)
-''  screen.setLoop(loop)
   screen.setLoop(true)
   screen.SetContent(content)
   screen.show()
@@ -153,15 +143,13 @@ Sub showContentScreen()
   content.Stream= Stream
   content.StreamFormat = "mp4"
 
-  screen = PlayFromVideoScreen(msgPort, content, true)
+  screen = PlayFromVideoScreen(msgPort, content)
   attractLoopPlaying = true
 
   while(true)
     msg = wait(0, msgPort)
     msgType = type(msg)
-    if msgType <> "roVideoScreenEvent" then
-      print msgType
-    endif
+
     if msgType="roSocketEvent" then
       if msg.getSocketID()=udp.getID() then
         if udp.isReadable() then
@@ -175,7 +163,7 @@ Sub showContentScreen()
           content.Stream= Stream
           content.StreamFormat = streamFormat
 
-          screen = PlayFromVideoScreen(msgPort, content, false)
+          screen = PlayFromVideoScreen(msgPort, content)
           attractLoopPlaying = false
 
 ''          if Instr(1, message, "video:") = 1 then
@@ -199,6 +187,9 @@ Sub showContentScreen()
         endif
       endif
     else if msgType = "roVideoScreenEvent" then
+
+      PrintVideoScreenEvent(msg)
+
       if IsMediaEndEvent(msg) then
         ' restart attract loop
         Stream = {}
@@ -206,7 +197,7 @@ Sub showContentScreen()
         content = {}
         content.Stream= Stream
         content.StreamFormat = "mp4"
-        screen = PlayFromVideoScreen(msgPort, content, true)
+        screen = PlayFromVideoScreen(msgPort, content)
         attractLoopPlaying = true
       else if IsPlaybackProgressEvent(msg) then
         if attractLoopPlaying then
@@ -214,26 +205,10 @@ Sub showContentScreen()
         else
           videoId = "0"
         endif
-        ProcessPlaybackPositionEvent(msg, udp, videoId)
+        ProcessPlaybackPositionEvent(udp, videoId)
       endif
-    endif
 
-''      if attractLoopPlaying then
-''        videoId = "attract"
-''      else
-''        videoId = "0"
-''      endif
-''      event$ = ProcessVideoScreenEvent(msg, screen, udp, videoId)
-''      if event$ = "MediaEnd" and not attractLoopPlaying then
-''        ' restart attract loop
-''        Stream = {}
-''        Stream.url = attractLoopUrl
-''        content = {}
-''        content.Stream= Stream
-''        content.StreamFormat = "mp4"
-''        screen = PlayFromVideoScreen(msgPort, content, true)
-''     endif
-''    end if
+    endif
   end while
 end Sub
 
