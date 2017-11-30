@@ -145,6 +145,7 @@ Sub showContentScreen()
 
   screen = PlayFromVideoScreen(msgPort, content)
   attractLoopPlaying = true
+  videoId = "attract"
 
   while(true)
     msg = wait(0, msgPort)
@@ -157,33 +158,20 @@ Sub showContentScreen()
           print "received socket message: '"; message; "'"
 
           print message
-          url = message
-          streamFormat = "mp4"
-          Stream.url = url
-          content.Stream= Stream
-          content.StreamFormat = streamFormat
 
-          screen = PlayFromVideoScreen(msgPort, content)
-          attractLoopPlaying = false
+          if Instr(1, message, "videoId:") = 1 then
+            videoId = mid(message, 9)
+            print "videoId: ";videoId
+          else
+            url = message
+            streamFormat = "mp4"
+            Stream.url = url
+            content.Stream= Stream
+            content.StreamFormat = streamFormat
 
-''          if Instr(1, message, "video:") = 1 then
-''            urlEndIndex = Instr(2, message, ":streamFormat:")
-''            print urlEndIndex
-
- ''           url = mid(message, 7, urlEndIndex - 7)
- ''           print url
-
-''            streamFormat = mid(message, urlEndIndex + 14)
-''            print streamFormat
-
-''            Stream.url = url
-''            content.Stream= Stream
-''            content.StreamFormat = streamFormat
-
-''            screen = PlayFromVideoScreen(msgPort, content, false)
-''            attractLoopPlaying = false
-
-''          endif
+            screen = PlayFromVideoScreen(msgPort, content)
+            attractLoopPlaying = false
+          endif
         endif
       endif
     else if msgType = "roVideoScreenEvent" then
@@ -199,12 +187,13 @@ Sub showContentScreen()
         content.StreamFormat = "mp4"
         screen = PlayFromVideoScreen(msgPort, content)
         attractLoopPlaying = true
+
       else if IsPlaybackProgressEvent(msg) then
-        if attractLoopPlaying then
-          videoId = "attract"
-        else
-          videoId = "0"
-        endif
+''        if attractLoopPlaying then
+''          videoId = "attract"
+''        else
+''          videoId = "0"
+''        endif
         ProcessPlaybackPositionEvent(udp, videoId)
       endif
 
