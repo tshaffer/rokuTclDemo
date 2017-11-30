@@ -32,18 +32,18 @@ sub Main(input as Dynamic)
 end sub
 
 
-Sub ProcessPlaybackPositionEvent(msg, udp)
+Sub ProcessPlaybackPositionEvent(msg, udp, videoId)
 
   print "isPlaybackPosition"
   print "index = ";msg.GetIndex()
   print "info = ";msg.GetInfo()
 
-  udp.sendStr("roku")
+  udp.sendStr("roku:" + videoId)
 
 End Sub
 
 
-Function ProcessVideoScreenEvent(msg, screen, udp) As String
+Function ProcessVideoScreenEvent(msg, screen, udp, videoId) As String
   if msg.isStatusMessage() then
     print "status message: "; msg.GetMessage()
     return "Status:" + msg.GetMessage()
@@ -58,7 +58,7 @@ Function ProcessVideoScreenEvent(msg, screen, udp) As String
     print "index = ";msg.GetIndex()
     print "info = ";msg.GetInfo()
   else if msg.isPlaybackPosition() then
-    ProcessPlaybackPositionEvent(msg, udp)
+    ProcessPlaybackPositionEvent(msg, udp, videoId)
   else if msg.isRequestFailed() then
     print "isRequestFailed"
   else if msg.isPaused() then
@@ -133,10 +133,10 @@ Sub showContentScreen()
   msgPort = CreateObject("roMessagePort")
 
   udp = CreateUdp(msgPort)
-  udp.sendStr("roku")
+  udp.sendStr("roku:attract")
 
   Stream = {}
-  attractLoopUrl = "http://10.1.0.95:3000/Roku_4K_Streams/TCL_2017_C-Series_BBY_4K-res.mp4"
+  attractLoopUrl = "http://10.1.0.95:8080/Roku_4K_Streams/TCL_2017_C-Series_BBY_4K-res.mp4"
   Stream.url = attractLoopUrl
 
   content = {}
@@ -157,31 +157,44 @@ Sub showContentScreen()
         if udp.isReadable() then
           message = udp.receiveStr(512) ' max 512 characters
           print "received socket message: '"; message; "'"
-          ' udp.sendStr("milkshake")  ' causes infinite loop as it comes back as a message'
 
           print message
-          if Instr(1, message, "video:") = 1 then
-            urlEndIndex = Instr(2, message, ":streamFormat:")
-            print urlEndIndex
+          url = message
+          streamFormat = "mp4"
+          Stream.url = url
+          content.Stream= Stream
+          content.StreamFormat = streamFormat
 
-            url = mid(message, 7, urlEndIndex - 7)
-            print url
+          screen = PlayFromVideoScreen(msgPort, content, false)
+          attractLoopPlaying = false
 
-            streamFormat = mid(message, urlEndIndex + 14)
-            print streamFormat
+''          if Instr(1, message, "video:") = 1 then
+''            urlEndIndex = Instr(2, message, ":streamFormat:")
+''            print urlEndIndex
 
-            Stream.url = url
-            content.Stream= Stream
-            content.StreamFormat = streamFormat
+ ''           url = mid(message, 7, urlEndIndex - 7)
+ ''           print url
 
-            screen = PlayFromVideoScreen(msgPort, content, false)
-            attractLoopPlaying = false
+''            streamFormat = mid(message, urlEndIndex + 14)
+''            print streamFormat
 
-          endif
+''            Stream.url = url
+''            content.Stream= Stream
+''            content.StreamFormat = streamFormat
+
+''            screen = PlayFromVideoScreen(msgPort, content, false)
+''            attractLoopPlaying = false
+
+''          endif
         endif
       endif
     else if msgType = "roVideoScreenEvent" then
-      event$ = ProcessVideoScreenEvent(msg, screen, udp)
+      if attractLoopPlaying then
+        videoId = "attract"
+      else
+        videoId = "0"
+      endif
+      event$ = ProcessVideoScreenEvent(msg, screen, udp, videoId)
       if event$ = "MediaEnd" and not attractLoopPlaying then
         ' restart attract loop
         Stream = {}
