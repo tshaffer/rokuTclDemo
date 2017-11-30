@@ -43,6 +43,16 @@ Sub ProcessPlaybackPositionEvent(msg, udp, videoId)
 End Sub
 
 
+Function IsMediaEndEvent(msg) As Boolean
+  return msg.isFullResult()
+End Function
+
+
+Function IsPlaybackProgressEvent(msg) As Boolean
+  return msg.isPlaybackPosition()
+End Function
+
+
 Function ProcessVideoScreenEvent(msg, screen, udp, videoId) As String
   if msg.isStatusMessage() then
     print "status message: "; msg.GetMessage()
@@ -189,13 +199,7 @@ Sub showContentScreen()
         endif
       endif
     else if msgType = "roVideoScreenEvent" then
-      if attractLoopPlaying then
-        videoId = "attract"
-      else
-        videoId = "0"
-      endif
-      event$ = ProcessVideoScreenEvent(msg, screen, udp, videoId)
-      if event$ = "MediaEnd" and not attractLoopPlaying then
+      if IsMediaEndEvent(msg) then
         ' restart attract loop
         Stream = {}
         Stream.url = attractLoopUrl
@@ -203,8 +207,33 @@ Sub showContentScreen()
         content.Stream= Stream
         content.StreamFormat = "mp4"
         screen = PlayFromVideoScreen(msgPort, content, true)
+        attractLoopPlaying = true
+      else if IsPlaybackProgressEvent(msg) then
+        if attractLoopPlaying then
+          videoId = "attract"
+        else
+          videoId = "0"
+        endif
+        ProcessPlaybackPositionEvent(msg, udp, videoId)
       endif
-    end if
+    endif
+
+''      if attractLoopPlaying then
+''        videoId = "attract"
+''      else
+''        videoId = "0"
+''      endif
+''      event$ = ProcessVideoScreenEvent(msg, screen, udp, videoId)
+''      if event$ = "MediaEnd" and not attractLoopPlaying then
+''        ' restart attract loop
+''        Stream = {}
+''        Stream.url = attractLoopUrl
+''        content = {}
+''        content.Stream= Stream
+''        content.StreamFormat = "mp4"
+''        screen = PlayFromVideoScreen(msgPort, content, true)
+''     endif
+''    end if
   end while
 end Sub
 
