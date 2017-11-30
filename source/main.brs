@@ -103,7 +103,7 @@ Function CreateUdp(msgPort) As Object
   addr = CreateObject("roSocketAddress")
   addr.setPort(5000)
   udp.setAddress(addr) ' bind to all host addresses on port 5000
-  addr.SetHostName("10.1.0.95")   ' BrightSign IP address
+  addr.SetHostName("10.1.0.55")   ' BrightSign IP address
   udp.setSendToAddress(addr) ' destination IP and port
   udp.notifyReadable(true)
 
@@ -136,7 +136,7 @@ Sub showContentScreen()
   udp.sendStr("roku:attract")
 
   Stream = {}
-  attractLoopUrl = "http://10.1.0.95:8080/Roku_4K_Streams/TCL_2017_C-Series_BBY_4K-res.mp4"
+  attractLoopUrl = "http://10.1.0.55:8080/Roku_4K_Streams/TCL_2017_C-Series_BBY_4K-res.mp4"
   Stream.url = attractLoopUrl
 
   content = {}
@@ -187,6 +187,7 @@ Sub showContentScreen()
         content.StreamFormat = "mp4"
         screen = PlayFromVideoScreen(msgPort, content)
         attractLoopPlaying = true
+        videoId = "attract"
 
       else if IsPlaybackProgressEvent(msg) then
 ''        if attractLoopPlaying then
